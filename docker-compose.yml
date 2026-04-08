@@ -1,0 +1,49 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/realestate
+      - NODE_ENV=production
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "npm run db:migrate && (npm run db:seed || true) && npm start"
+
+  studio:
+    image: node:22-alpine
+    working_dir: /app
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/realestate
+    ports:
+      - "4983:4983"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    command: npx drizzle-kit studio --host 0.0.0.0
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=realestate
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d realestate"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
