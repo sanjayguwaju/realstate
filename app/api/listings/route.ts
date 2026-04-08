@@ -1,64 +1,52 @@
 import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
 import { getListings } from "@/lib/services/listings.service"
+
+const querySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).transform(v => Math.min(v, 100)).default(20),
+  price_min: z.coerce.number().int().optional(),
+  price_max: z.coerce.number().int().optional(),
+  beds: z.coerce.number().int().optional(),
+  baths: z.coerce.number().int().optional(),
+  type: z.enum(["house", "apartment", "townhouse", "land"]).optional(),
+  suburb: z.string().optional(),
+  keyword: z.string().optional(),
+})
 
 export async function GET(req: NextRequest) {
   try {
     const sp = req.nextUrl.searchParams
+    const rawQuery = Object.fromEntries(sp.entries())
+    const parseResult = querySchema.safeParse(rawQuery)
 
-    const page = Math.max(1, Number(sp.get("page")) || 1)
-    const limit = Math.min(100, Math.max(1, Number(sp.get("limit")) || 20))
-
-    const priceMin = sp.get("price_min")
-      ? Number(sp.get("price_min"))
-      : undefined
-    const priceMax = sp.get("price_max")
-      ? Number(sp.get("price_max"))
-      : undefined
-    const beds = sp.get("beds") ? Number(sp.get("beds")) : undefined
-    const baths = sp.get("baths") ? Number(sp.get("baths")) : undefined
-
-    if (priceMin !== undefined && isNaN(priceMin)) {
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: "price_min must be a valid number" },
-        { status: 400 }
-      )
-    }
-    if (priceMax !== undefined && isNaN(priceMax)) {
-      return NextResponse.json(
-        { error: "price_max must be a valid number" },
-        { status: 400 }
-      )
-    }
-    if (beds !== undefined && isNaN(beds)) {
-      return NextResponse.json(
-        { error: "beds must be a valid number" },
-        { status: 400 }
-      )
-    }
-    if (baths !== undefined && isNaN(baths)) {
-      return NextResponse.json(
-        { error: "baths must be a valid number" },
+        { error: parseResult.error.issues[0].message },
         { status: 400 }
       )
     }
 
-    const validTypes = ["house", "apartment", "townhouse", "land"]
-    const type = sp.get("type") ?? undefined
-    if (type && !validTypes.includes(type)) {
-      return NextResponse.json(
-        { error: `type must be one of: ${validTypes.join(", ")}` },
-        { status: 400 }
-      )
-    }
+    const {
+      page,
+      limit,
+      price_min: priceMin,
+      price_max: priceMax,
+      beds,
+      baths,
+      type,
+      suburb,
+      keyword,
+    } = parseResult.data
 
     const result = await getListings({
-      suburb: sp.get("suburb") ?? undefined,
+      suburb,
       priceMin,
       priceMax,
       beds,
       baths,
       type,
-      keyword: sp.get("keyword") ?? undefined,
+      keyword,
       page,
       limit,
     })

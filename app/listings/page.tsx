@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState, useCallback, Suspense } from "react"
+import { z } from "zod"
 import Link from "next/link"
 import Image from "next/image"
 import {
@@ -43,6 +44,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface ListingItem {
   id: string
@@ -71,6 +73,16 @@ const PROPERTY_TYPES = [
   { value: "townhouse", label: "Townhouse" },
   { value: "land", label: "Land" },
 ]
+
+const filterSchema = z.object({
+  suburb: z.string().max(100).optional(),
+  priceMin: z.coerce.number().int().min(0).optional(),
+  priceMax: z.coerce.number().int().min(0).optional(),
+  beds: z.coerce.number().int().min(0).optional(),
+  baths: z.coerce.number().int().min(0).optional(),
+  type: z.enum(["house", "apartment", "townhouse", "land"]).optional(),
+  keyword: z.string().max(100).optional(),
+})
 
 function getTypeIcon(type: string) {
   switch (type) {
@@ -143,6 +155,7 @@ function ListingsContent() {
   const [listings, setListings] = useState<ListingItem[]>([])
   const [pagination, setPagination] = useState<Pagination | null>(null)
   const [loading, setLoading] = useState(true)
+  const [validationError, setValidationError] = useState<string | null>(null)
 
   const [suburb, setSuburb] = useState(searchParams.get("suburb") ?? "")
   const [priceMin, setPriceMin] = useState(searchParams.get("price_min") ?? "")
@@ -206,20 +219,40 @@ function ListingsContent() {
   }, [searchParams])
 
   const applyFilters = (page = 1) => {
+    setValidationError(null)
+
+    const rawFilters = {
+      suburb: suburb || undefined,
+      priceMin: priceMin || undefined,
+      priceMax: priceMax || undefined,
+      beds: beds || undefined,
+      baths: baths || undefined,
+      type: type || undefined,
+      keyword: keyword || undefined,
+    }
+
+    const parseResult = filterSchema.safeParse(rawFilters)
+    if (!parseResult.success) {
+      setValidationError(parseResult.error.issues[0].message)
+      return
+    }
+
+    const valid = parseResult.data
     const params = new URLSearchParams()
-    if (suburb) params.set("suburb", suburb)
-    if (priceMin) params.set("price_min", priceMin)
-    if (priceMax) params.set("price_max", priceMax)
-    if (beds) params.set("beds", beds)
-    if (baths) params.set("baths", baths)
-    if (type) params.set("type", type)
-    if (keyword) params.set("keyword", keyword)
+    if (valid.suburb) params.set("suburb", valid.suburb)
+    if (valid.priceMin !== undefined) params.set("price_min", String(valid.priceMin))
+    if (valid.priceMax !== undefined) params.set("price_max", String(valid.priceMax))
+    if (valid.beds !== undefined) params.set("beds", String(valid.beds))
+    if (valid.baths !== undefined) params.set("baths", String(valid.baths))
+    if (valid.type) params.set("type", valid.type)
+    if (valid.keyword) params.set("keyword", valid.keyword)
     if (page > 1) params.set("page", String(page))
 
     router.push(`/listings?${params.toString()}`)
   }
 
   const clearFilters = () => {
+    setValidationError(null)
     setSuburb("")
     setPriceMin("")
     setPriceMax("")
@@ -277,6 +310,11 @@ function ListingsContent() {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
+            {validationError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>{validationError}</AlertDescription>
+              </Alert>
+            )}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-1.5">
                 <Label htmlFor="filter-suburb">Suburb</Label>

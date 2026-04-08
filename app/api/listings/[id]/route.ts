@@ -1,21 +1,28 @@
 import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
 import { getListingById } from "@/lib/services/listings.service"
 import { isAdmin } from "@/lib/middleware/auth"
-import { validate as uuidValidate, version as uuidVersion } from "uuid"
+
+const paramsSchema = z.object({
+  id: z.string().uuid("Invalid listing ID format — expected a UUID v4"),
+})
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
+    const rawParams = await params
+    const parseResult = paramsSchema.safeParse(rawParams)
 
-    if (!uuidValidate(id) || uuidVersion(id) !== 4) {
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: "Invalid listing ID format — expected a UUID v4" },
+        { error: parseResult.error.issues[0].message },
         { status: 400 }
       )
     }
+
+    const { id } = parseResult.data
 
     const listing = await getListingById(id, isAdmin(req))
 
