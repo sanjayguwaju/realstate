@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState, useCallback, Suspense } from "react"
 import Link from "next/link"
-import { Search, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 
 import { RoleToggle } from "@/components/role-toggle"
 import { Button } from "@/components/ui/button"
@@ -150,12 +150,6 @@ function ListingsContent() {
           </Link>
           <nav className="flex items-center gap-4">
             <RoleToggle />
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/listings">
-                <Search className="size-4" />
-                Search
-              </Link>
-            </Button>
           </nav>
         </div>
       </header>
