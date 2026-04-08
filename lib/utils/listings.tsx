@@ -81,56 +81,37 @@ export const filterSchema = z.object({
 
 export type FilterValues = z.infer<typeof filterSchema>
 
-export function getTypeIcon(type: string): ReactNode {
-  switch (type) {
-    case "house":
-      return <Home className="size-4" />
-    case "apartment":
-      return <Building2 className="size-4" />
-    case "townhouse":
-      return <Building className="size-4" />
-    case "land":
-      return <TreePine className="size-4" />
-    default:
-      return <Home className="size-4" />
-  }
+const typeIconMap: Record<string, ReactNode> = {
+  house: <Home className="size-4" />,
+  apartment: <Building2 className="size-4" />,
+  townhouse: <Building className="size-4" />,
+  land: <TreePine className="size-4" />,
 }
 
-export function getTypeEmoji(type: string): string {
-  switch (type) {
-    case "house":
-      return "🏠"
-    case "apartment":
-      return "🏢"
-    case "townhouse":
-      return "🏘️"
-    case "land":
-      return "🌳"
-    default:
-      return "🏠"
-  }
+export const getTypeIcon = (type: string): ReactNode => typeIconMap[type] ?? <Home className="size-4" />
+
+const typeEmojiMap: Record<string, string> = {
+  house: "🏠",
+  apartment: "🏢",
+  townhouse: "🏘️",
+  land: "🌳",
 }
 
-export function getStatusVariant(
+export const getTypeEmoji = (type: string): string => typeEmojiMap[type] ?? "🏠"
+
+const statusVariantMap: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  active: "default",
+  under_offer: "secondary",
+  sold: "destructive",
+}
+
+export const getStatusVariant = (
   status: string
-): "default" | "secondary" | "destructive" | "outline" {
-  switch (status) {
-    case "active":
-      return "default"
-    case "under_offer":
-      return "secondary"
-    case "sold":
-      return "destructive"
-    default:
-      return "outline"
-  }
-}
+): "default" | "secondary" | "destructive" | "outline" => statusVariantMap[status] ?? "outline"
 
-export function formatPrice(price: string): string {
-  const num = parseFloat(price)
-  return new Intl.NumberFormat("en-AU", {
+export const formatPrice = (price: string): string =>
+  new Intl.NumberFormat("en-AU", {
     style: "currency",
     currency: "AUD",
     maximumFractionDigits: 0,
-  }).format(num)
-}
+  }).format(parseFloat(price))

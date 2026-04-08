@@ -10,12 +10,8 @@ interface AgentCardProps {
   agent: PropertyDetail["agent"]
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-}
+const getInitials = (name: string): string =>
+  name.split(" ").map((n) => n.at(0)).join("")
 
 export function AgentCard({ agent }: AgentCardProps) {
   if (!agent) return null
